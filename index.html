@@ -1,0 +1,943 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>钢结构旋转楼梯重量计算工具</title>
+<style>
+:root{
+  --bg:#f7f6f3;--surface:#ffffff;--border:#e5e3dc;--border2:#d0cec6;
+  --text:#1a1917;--text2:#5a5854;--text3:#9a9893;
+  --blue:#1a56db;--blue-bg:#eef3fd;--blue-light:#dbeafe;
+  --green:#15803d;--green-bg:#f0fdf4;
+  --amber:#b45309;--amber-bg:#fffbeb;
+  --red:#dc2626;--red-bg:#fef2f2;
+  --navy:#1e3a5f;
+  --radius:8px;--radius-lg:12px;
+  font-family:'PingFang SC','Microsoft YaHei',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);min-height:100vh;font-size:14px}
+.app{display:grid;grid-template-columns:260px 1fr;min-height:100vh}
+
+/* 左侧导航 */
+.sidebar{background:var(--navy);color:#fff;padding:0;display:flex;flex-direction:column}
+.sidebar-logo{padding:20px 20px 16px;border-bottom:1px solid rgba(255,255,255,.1)}
+.sidebar-logo h1{font-size:15px;font-weight:600;line-height:1.4}
+.sidebar-logo p{font-size:11px;color:rgba(255,255,255,.5);margin-top:3px}
+.nav-section{padding:12px 12px 0}
+.nav-label{font-size:10px;color:rgba(255,255,255,.4);letter-spacing:.08em;padding:0 8px;margin-bottom:4px}
+.nav-item{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:6px;cursor:pointer;font-size:13px;color:rgba(255,255,255,.7);transition:all .15s;margin-bottom:2px}
+.nav-item:hover{background:rgba(255,255,255,.08);color:#fff}
+.nav-item.active{background:rgba(255,255,255,.15);color:#fff;font-weight:500}
+.nav-item .dot{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.3);flex-shrink:0}
+.nav-item.active .dot{background:#60a5fa}
+.nav-item.done .dot{background:#34d399}
+.nav-item.warn .dot{background:#fbbf24}
+.sidebar-footer{margin-top:auto;padding:16px;font-size:11px;color:rgba(255,255,255,.3);border-top:1px solid rgba(255,255,255,.08)}
+
+/* 主内容 */
+.main{overflow-y:auto}
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:0 28px;height:52px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10}
+.topbar-title{font-size:15px;font-weight:600}
+.topbar-actions{display:flex;gap:8px}
+.btn{padding:6px 14px;border-radius:var(--radius);font-size:13px;cursor:pointer;border:1px solid var(--border2);background:var(--surface);color:var(--text);transition:all .15s}
+.btn:hover{background:var(--bg);border-color:var(--text3)}
+.btn-primary{background:var(--navy);color:#fff;border-color:var(--navy)}
+.btn-primary:hover{background:#2a4a6f;border-color:#2a4a6f}
+.btn-sm{padding:4px 10px;font-size:12px}
+
+.content{padding:24px 28px;max-width:960px}
+.section{margin-bottom:20px}
+.section-title{font-size:13px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px;display:flex;align-items:center;gap:6px}
+.section-title::before{content:'';width:3px;height:14px;background:var(--blue);border-radius:2px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px 20px;margin-bottom:12px}
+
+/* 表单网格 */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.g5{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
+.field{display:flex;flex-direction:column;gap:5px}
+.field label{font-size:11px;font-weight:500;color:var(--text2)}
+.field input{height:34px;border:1px solid var(--border2);border-radius:var(--radius);padding:0 10px;font-size:13px;color:var(--text);background:var(--surface);transition:border .15s;width:100%}
+.field input:focus{outline:none;border-color:var(--blue)}
+.field input[readonly]{background:var(--bg);color:var(--text2)}
+.field input::placeholder{color:var(--text3)}
+.field .sub{font-size:11px;color:var(--text3);margin-top:2px}
+.field .auto{font-size:10px;background:var(--blue-bg);color:var(--blue);border-radius:3px;padding:1px 5px;margin-left:4px;font-weight:500}
+.field .tbd{font-size:11px;color:var(--amber);background:var(--amber-bg);border-radius:3px;padding:2px 6px;display:inline-block;margin-top:4px}
+.field .live{font-size:12px;color:var(--blue);font-weight:500;margin-top:4px}
+
+.divline{height:1px;background:var(--border);margin:14px 0}
+.group-label{font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin:12px 0 8px}
+
+/* 项目名称栏 */
+.project-bar{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:12px 16px;margin-bottom:20px;display:flex;align-items:center;gap:12px}
+.project-bar input{flex:1;border:none;background:transparent;font-size:15px;font-weight:600;color:var(--text);outline:none}
+.project-bar input::placeholder{color:var(--text3);font-weight:400}
+.project-tag{font-size:11px;background:var(--blue-bg);color:var(--blue);border-radius:4px;padding:3px 8px;white-space:nowrap}
+
+/* 结果区 */
+.result-panel{display:none}
+.result-panel.show{display:block}
+.metrics-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+.metric-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px 16px}
+.metric-card.highlight{background:var(--navy);border-color:var(--navy)}
+.metric-card .ml{font-size:11px;color:var(--text3);margin-bottom:4px}
+.metric-card.highlight .ml{color:rgba(255,255,255,.6)}
+.metric-card .mv{font-size:22px;font-weight:700;color:var(--text)}
+.metric-card.highlight .mv{color:#fff;font-size:26px}
+.metric-card .mu{font-size:12px;color:var(--text3);margin-left:2px}
+.metric-card.highlight .mu{color:rgba(255,255,255,.6)}
+
+/* 明细表 */
+.detail-table{width:100%;border-collapse:collapse;font-size:13px}
+.detail-table th{background:var(--bg);color:var(--text2);font-weight:500;padding:8px 12px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.04em}
+.detail-table td{padding:9px 12px;border-bottom:1px solid var(--border)}
+.detail-table tr:last-child td{border-bottom:none}
+.detail-table .name{font-weight:500}
+.detail-table .formula{font-size:11px;color:var(--text3);font-family:monospace;margin-top:2px}
+.detail-table .total-row td{background:var(--blue-bg);font-weight:600;color:var(--navy)}
+.detail-table .extra-row td{color:var(--text3);font-size:12px}
+.detail-table .grand-row td{background:var(--navy);color:#fff;font-weight:700;font-size:14px}
+.detail-table .backup-row td{background:var(--green-bg);color:var(--green);font-weight:600}
+.badge-tbd{font-size:10px;background:var(--amber-bg);color:var(--amber);border-radius:3px;padding:1px 5px}
+
+/* 条形图 */
+.bar-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.bar-name{width:80px;font-size:12px;color:var(--text2);text-align:right;flex-shrink:0}
+.bar-track{flex:1;background:var(--bg);border-radius:3px;height:18px;overflow:hidden}
+.bar-fill{height:100%;border-radius:3px;transition:width .4s}
+.bar-val{width:70px;font-size:12px;font-weight:500;text-align:right}
+
+/* 计算过程 */
+.calc-block{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:10px 14px;font-family:monospace;font-size:12px;color:var(--text2);line-height:1.9;white-space:pre-wrap;word-break:break-all}
+.calc-title{font-size:12px;font-weight:600;color:var(--text2);margin-bottom:6px;display:flex;align-items:center;gap:6px}
+
+/* 摘要卡 */
+.geo-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px}
+.geo-item{background:var(--bg);border-radius:var(--radius);padding:8px 10px}
+.geo-item .gk{font-size:10px;color:var(--text3);margin-bottom:2px}
+.geo-item .gv{font-size:13px;font-weight:600}
+
+/* 打印 */
+@media print{
+  .sidebar,.topbar,.topbar-actions,.btn{display:none!important}
+  .app{display:block}
+  .main{overflow:visible}
+  .content{padding:0}
+  .input-section{display:none}
+  .result-panel{display:block!important}
+  body{background:#fff}
+  .card{border:1px solid #ccc;break-inside:avoid}
+}
+
+/* 页面切换 */
+.page{display:none}
+.page.active{display:block}
+
+/* 保存提示 */
+.save-toast{position:fixed;bottom:24px;right:24px;background:var(--navy);color:#fff;padding:10px 18px;border-radius:var(--radius);font-size:13px;opacity:0;transition:opacity .3s;pointer-events:none;z-index:999}
+.save-toast.show{opacity:1}
+
+/* 段落分隔 */
+.sub-card{background:var(--bg);border-radius:var(--radius);padding:12px 14px;margin-top:10px}
+.mini-table{width:100%;border-collapse:collapse;font-size:13px}
+.mini-table th{background:var(--bg);color:var(--text2);font-weight:500;padding:8px 10px;text-align:left;font-size:11px}
+.mini-table td{padding:7px 10px;border-bottom:1px solid var(--border);vertical-align:top}
+.mini-table tr:last-child td{border-bottom:none}
+.mini-table input{height:32px;border:1px solid var(--border2);border-radius:var(--radius);padding:0 8px;font-size:13px;width:100%}
+.mini-table input[readonly]{background:var(--bg);color:var(--text2)}
+.seg{display:inline-flex;border:1px solid var(--border2);border-radius:var(--radius);overflow:hidden;background:var(--surface)}
+.seg button{border:0;border-right:1px solid var(--border2);background:var(--surface);padding:6px 18px;font-size:13px;cursor:pointer;color:var(--text2)}
+.seg button:last-child{border-right:0}
+.seg button.active{background:var(--navy);color:#fff}
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- 左侧导航 -->
+<div class="sidebar">
+  <div class="sidebar-logo">
+    <h1>钢结构楼梯<br>重量计算工具</h1>
+    <p>旋转楼梯 · 专业版</p>
+  </div>
+  <div class="nav-section">
+    <div class="nav-label">输入参数</div>
+    <div class="nav-item active" id="nav-basic" onclick="scrollTo('sec-basic')"><div class="dot" id="dot-basic"></div>基本参数</div>
+    <div class="nav-item" id="nav-arc" onclick="scrollTo('sec-arc')"><div class="dot" id="dot-arc"></div>弧长 & 斜长</div>
+    <div class="nav-item" id="nav-beam" onclick="scrollTo('sec-beam')"><div class="dot" id="dot-beam"></div>梯梁截面</div>
+    <div class="nav-item" id="nav-hbox" onclick="scrollTo('sec-hbox')"><div class="dot" id="dot-hbox"></div>高箱体侧板</div>
+    <div class="nav-item" id="nav-cross" onclick="scrollTo('sec-cross')"><div class="dot" id="dot-cross"></div>联系横梁</div>
+    <div class="nav-item" id="nav-step" onclick="scrollTo('sec-step')"><div class="dot" id="dot-step"></div>踏板 & 立板</div>
+    <div class="nav-item" id="nav-extra" onclick="scrollTo('sec-extra')"><div class="dot" id="dot-extra"></div>附加构件</div>
+    <div class="nav-label" style="margin-top:12px">输出</div>
+    <div class="nav-item" onclick="showResult()"><div class="dot"></div>查看计算结果</div>
+    <div class="nav-item" onclick="window.print()"><div class="dot"></div>打印 / 导出PDF</div>
+    <div class="nav-item" onclick="exportExcelFile()"><div class="dot"></div>导出Excel表格</div>
+  </div>
+  <div class="sidebar-footer">v5.0 · 钢材密度 7850 kg/m³</div>
+</div>
+
+<!-- 主内容 -->
+<div class="main" id="main-scroll">
+<div class="topbar">
+  <div class="topbar-title">参数输入</div>
+  <div class="topbar-actions">
+    <button class="btn btn-sm" onclick="saveData()">保存数据</button>
+    <button class="btn btn-sm" onclick="loadData()">恢复上次</button>
+    <button class="btn btn-sm" onclick="resetAll()">重置</button>
+    <button class="btn btn-sm" onclick="exportExcelFile()">导出Excel</button>
+    <button class="btn btn-primary btn-sm" onclick="showResult()">计算结果 →</button>
+  </div>
+</div>
+
+<div class="content">
+  <!-- 项目名称 -->
+  <div class="project-bar">
+    <input type="text" id="project_name" placeholder="输入项目名称（如：上海XX旋转楼梯）" oninput="saveData()">
+    <div class="project-tag" id="project_date"></div>
+  </div>
+
+  <!-- 基本参数 -->
+  <div class="section" id="sec-basic">
+    <div class="section-title">基本参数</div>
+    <div class="card">
+      <div class="group-label">楼梯几何</div>
+      <div class="g4">
+        <div class="field"><label>层高（mm）</label><input type="number" id="floor_h" value="5520" oninput="syncBasic()"><div class="sub">建筑层高</div></div>
+        <div class="field"><label>踏步数（步）</label><input type="number" id="steps" value="34" min="1" oninput="syncBasic()"></div>
+        <div class="field"><label>步高（mm）<span class="auto">自动</span></label><input type="number" id="step_h" readonly><div class="sub" id="step_h_sub"></div></div>
+        <div class="field"><label>钢梯总高度（mm）</label><input type="number" id="height" value="5520" oninput="calc()"><div class="sub">通常=层高</div></div>
+      </div>
+      <div class="divline"></div>
+      <div class="group-label">步宽（径向，每步弧长）</div>
+      <div class="g3">
+        <div class="field"><label>外弧步宽（mm）</label><input type="number" id="step_w_out" value="606" oninput="syncWidths()"><div class="sub">外弧每步弧长</div></div>
+        <div class="field"><label>内弧步宽（mm）</label><input type="number" id="step_w_in" value="382" oninput="syncWidths()"><div class="sub">内弧每步弧长</div></div>
+        <div class="field"><label>中间步宽（mm）<span class="auto">自动</span></label><input type="number" id="step_w_mid" readonly><div class="sub" id="mid_sub"></div></div>
+      </div>
+      <div class="divline"></div>
+      <div class="group-label">步长 & 附加</div>
+      <div class="g3">
+        <div class="field"><label>步长（mm）</label><input type="number" id="step_len" value="1300" oninput="syncLen()"><div class="sub">踏步板长度方向</div></div>
+        <div class="field"><label>附加系数（%）</label><input type="number" id="extra_pct" value="8" min="0" max="30" oninput="calc()"><div class="sub">焊缝/连接件附加</div></div>
+        <div class="field"><label>备料损耗（%）</label><input type="number" id="waste_pct" value="5" min="0" max="20" oninput="calc()"><div class="sub">加工损耗建议5%</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 弧长斜长 -->
+  <div class="section" id="sec-arc">
+    <div class="section-title">弧长 & 斜长</div>
+    <div class="card">
+      <div class="group-label">水平弧长（两种方式）</div>
+      <div style="display:flex;gap:6px;margin-bottom:12px">
+        <button class="btn btn-sm" id="arc_btn_total" onclick="setArcMode('total')" style="background:var(--navy);color:#fff;border-color:var(--navy)">填总弧长</button>
+        <button class="btn btn-sm" id="arc_btn_step" onclick="setArcMode('step')">步宽×步数自动算</button>
+      </div>
+      <div id="arc_total_div">
+        <div class="g2">
+          <div class="field"><label>外弧水平弧长（m）</label><input type="number" id="arc_out" value="20" step="0.1" oninput="calcSlant()"></div>
+          <div class="field"><label>内弧水平弧长（m）</label><input type="number" id="arc_in" value="13" step="0.1" oninput="calcSlant()"></div>
+        </div>
+      </div>
+      <div id="arc_step_div" style="display:none">
+        <div class="sub-card" style="font-size:13px">
+          外弧：<b id="auto_out">—</b> m &nbsp;|&nbsp; 内弧：<b id="auto_in">—</b> m
+          <div style="font-size:11px;color:var(--text3);margin-top:4px">由基本参数中"步宽×步数"自动计算</div>
+        </div>
+      </div>
+      <div class="divline"></div>
+      <div class="group-label">展开斜长（自动计算，可手动覆盖）</div>
+      <div class="g2">
+        <div class="field"><label>外弧斜长（m）</label><input type="number" id="L_out" value="20.748" step="0.001" oninput="calc()"><div class="sub" id="h_out_sub"></div></div>
+        <div class="field"><label>内弧斜长（m）</label><input type="number" id="L_in" value="14.123" step="0.001" oninput="calc()"><div class="sub" id="h_in_sub"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 梯梁 -->
+  <div class="section" id="sec-beam">
+    <div class="section-title">梯梁截面（箱型梁，外形扣内空）</div>
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <div class="group-label" style="margin:0">是否有箱型梯梁</div>
+        <div class="seg">
+          <button type="button" id="beam_btn_none" class="active" onclick="setBeamMode('none')">无</button>
+          <button type="button" id="beam_btn_yes" onclick="setBeamMode('yes')">有</button>
+        </div>
+      </div>
+      <div id="beam-fields" style="display:none">
+        <div class="group-label">外弧梯梁</div>
+        <div class="g4">
+          <div class="field"><label>梁高 H（mm）</label><input type="number" id="ob_H" value="0" oninput="calc()"></div>
+          <div class="field"><label>梁宽 B（mm）</label><input type="number" id="ob_B" value="0" oninput="calc()"></div>
+          <div class="field"><label>板厚 t（mm）</label><input type="number" id="ob_t" value="0" oninput="calc()"></div>
+          <div class="field"><label>线密度<span class="auto">实时</span></label><input id="ob_q" readonly><div class="sub">kg/m</div></div>
+        </div>
+        <div class="divline"></div>
+        <div class="group-label">内弧梯梁</div>
+        <div class="g4">
+          <div class="field"><label>梁高 H（mm）</label><input type="number" id="ib_H" value="0" oninput="calc()"></div>
+          <div class="field"><label>梁宽 B（mm）</label><input type="number" id="ib_B" value="0" oninput="calc()"></div>
+          <div class="field"><label>板厚 t（mm）</label><input type="number" id="ib_t" value="0" oninput="calc()"></div>
+          <div class="field"><label>线密度<span class="auto">实时</span></label><input id="ib_q" readonly><div class="sub">kg/m</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 高箱体 -->
+  <div class="section" id="sec-hbox">
+    <div class="section-title">高箱体侧板（三块板）</div>
+    <div class="card">
+      <div class="group-label">外弧高箱体（沿外弧斜长）</div>
+      <div class="g4">
+        <div class="field"><label>外侧板厚（mm）</label><input type="number" id="oh_t1" value="10" oninput="calc()"></div>
+        <div class="field"><label>外侧板高（mm）</label><input type="number" id="oh_h1" value="1150" oninput="calc()"></div>
+        <div class="field"><label>内侧板厚（mm）</label><input type="number" id="oh_t2" value="8" oninput="calc()"></div>
+        <div class="field"><label>内侧板高（mm）</label><input type="number" id="oh_h2" value="850" oninput="calc()"></div>
+      </div>
+      <div class="g3" style="margin-top:10px">
+        <div class="field"><label>封板厚（mm）</label><input type="number" id="oh_t3" value="10" oninput="calc()"></div>
+        <div class="field"><label>封板宽（mm）</label><input type="number" id="oh_h3" value="60" oninput="calc()"></div>
+        <div class="field"><label>小计<span class="auto">实时</span></label><input id="oh_total" readonly><div class="sub">kg</div></div>
+      </div>
+      <div class="divline"></div>
+      <div class="group-label">内弧高箱体（沿内弧斜长）</div>
+      <div class="g4">
+        <div class="field"><label>外侧板厚（mm）</label><input type="number" id="ih_t1" value="10" oninput="calc()"></div>
+        <div class="field"><label>外侧板高（mm）</label><input type="number" id="ih_h1" value="1150" oninput="calc()"></div>
+        <div class="field"><label>内侧板厚（mm）</label><input type="number" id="ih_t2" value="8" oninput="calc()"></div>
+        <div class="field"><label>内侧板高（mm）</label><input type="number" id="ih_h2" value="850" oninput="calc()"></div>
+      </div>
+      <div class="g3" style="margin-top:10px">
+        <div class="field"><label>封板厚（mm）</label><input type="number" id="ih_t3" value="10" oninput="calc()"></div>
+        <div class="field"><label>封板宽（mm）</label><input type="number" id="ih_h3" value="60" oninput="calc()"></div>
+        <div class="field"><label>小计<span class="auto">实时</span></label><input id="ih_total" readonly><div class="sub">kg</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 联系横梁 -->
+  <div class="section" id="sec-cross">
+    <div class="section-title">联系横梁</div>
+    <div class="card">
+      <div class="g5">
+        <div class="field"><label>梁高 H（mm）</label><input type="number" id="cb_H" value="300" oninput="calc()"></div>
+        <div class="field"><label>梁宽 B（mm）</label><input type="number" id="cb_B" value="150" oninput="calc()"></div>
+        <div class="field"><label>板厚 t（mm）</label><input type="number" id="cb_t" value="16" oninput="calc()"></div>
+        <div class="field"><label>单根长度（mm）</label><input type="number" id="cb_L" value="960" oninput="calc()"></div>
+        <div class="field"><label>线密度<span class="auto">实时</span></label><input id="cb_q" readonly><div class="sub">kg/m</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 踏立板 -->
+  <div class="section" id="sec-step">
+    <div class="section-title">踏板 & 立板</div>
+    <div class="card">
+      <div class="group-label">踏板</div>
+      <div class="g4">
+        <div class="field"><label>长（mm）<span class="auto">同步步长</span></label><input type="number" id="tr_L" value="1300" oninput="calc()"></div>
+        <div class="field"><label>宽—中间步宽（mm）<span class="auto">自动</span></label><input type="number" id="tr_W" value="494" oninput="calc()"></div>
+        <div class="field"><label>板厚（mm）</label><input type="number" id="tr_t" value="5" oninput="calc()"></div>
+        <div class="field"><label>合计<span class="auto">实时</span></label><input id="tr_total" readonly><div class="sub">kg</div></div>
+      </div>
+      <div class="divline"></div>
+      <div class="group-label">立板</div>
+      <div class="g4">
+        <div class="field"><label>长（mm）<span class="auto">同步步长</span></label><input type="number" id="rs_L" value="1300" oninput="calc()"></div>
+        <div class="field"><label>高—步高（mm）<span class="auto">自动</span></label><input type="number" id="rs_W" value="162.4" oninput="calc()"></div>
+        <div class="field"><label>板厚（mm）</label><input type="number" id="rs_t" value="5" oninput="calc()"></div>
+        <div class="field"><label>合计<span class="auto">实时</span></label><input id="rs_total" readonly><div class="sub">kg</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 附加构件 -->
+  <div class="section" id="sec-extra">
+    <div class="section-title">附加构件</div>
+
+    <!-- 封底板 -->
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div style="font-size:13px;font-weight:600">封底板（取中弧）</div>
+        <div style="font-size:11px;color:var(--text3)">单步重 = 板厚 × 板宽 × 步长 × 7850</div>
+      </div>
+      <div class="g4">
+        <div class="field"><label>板厚（mm）</label><input type="number" id="mb_bt" value="2" oninput="calc()"></div>
+        <div class="field"><label>板宽（mm）</label><input type="number" id="mb_bw" value="960" oninput="calc()"><div class="sub">一般取横梁净跨</div></div>
+        <div class="field"><label>步长—中弧均值<span class="auto">自动</span></label><input id="mb_bl" readonly><div class="sub" id="mb_bl_sub"></div></div>
+        <div class="field"><label>合计<span class="auto">实时</span></label><input id="mb_total" readonly><div class="sub">kg</div></div>
+      </div>
+    </div>
+
+    <!-- 休台 / 平台板 -->
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div style="font-size:13px;font-weight:600">休台 / 平台板（分块填写）</div>
+        <div style="font-size:11px;color:var(--text3)">每块重量 = 面积 × 板厚 × 7850 × 数量</div>
+      </div>
+      <table class="mini-table">
+        <thead><tr><th>板块</th><th>面积（m²）</th><th>板厚（mm）</th><th>数量</th><th>小计（kg）</th></tr></thead>
+        <tbody>
+          <tr><td>休台板1</td><td><input type="number" id="lp1_area" min="0" step="0.001" placeholder="CAD量取" oninput="calc()"></td><td><input type="number" id="lp1_t" value="5" min="0" step="0.5" oninput="calc()"></td><td><input type="number" id="lp1_n" value="0" min="0" step="1" oninput="calc()"></td><td><input id="lp1_total" readonly></td></tr>
+          <tr><td>休台板2</td><td><input type="number" id="lp2_area" min="0" step="0.001" placeholder="CAD量取" oninput="calc()"></td><td><input type="number" id="lp2_t" value="5" min="0" step="0.5" oninput="calc()"></td><td><input type="number" id="lp2_n" value="0" min="0" step="1" oninput="calc()"></td><td><input id="lp2_total" readonly></td></tr>
+          <tr><td>休台板3</td><td><input type="number" id="lp3_area" min="0" step="0.001" placeholder="可选" oninput="calc()"></td><td><input type="number" id="lp3_t" value="5" min="0" step="0.5" oninput="calc()"></td><td><input type="number" id="lp3_n" value="0" min="0" step="1" oninput="calc()"></td><td><input id="lp3_total" readonly></td></tr>
+          <tr><td>休台板4</td><td><input type="number" id="lp4_area" min="0" step="0.001" placeholder="可选" oninput="calc()"></td><td><input type="number" id="lp4_t" value="5" min="0" step="0.5" oninput="calc()"></td><td><input type="number" id="lp4_n" value="0" min="0" step="1" oninput="calc()"></td><td><input id="lp4_total" readonly></td></tr>
+        </tbody>
+      </table>
+      <div class="sub-card" style="display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:12px;color:var(--text2)">提示：红框多块异形板建议分别用 CAD AREA 量面积，再逐行填写。</span>
+        <span style="font-weight:700;color:var(--navy)">平台板合计：<span id="lp_total_text">0.0</span> kg</span>
+      </div>
+    </div>
+
+    <!-- 休台封底板 -->
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div style="font-size:13px;font-weight:600">休台封底板</div>
+        <div style="font-size:11px;color:var(--text3)">用于休台底部封板，单独计入</div>
+      </div>
+      <table class="mini-table">
+        <thead><tr><th>封底</th><th>面积（m²）</th><th>板厚（mm）</th><th>数量</th><th>小计（kg）</th></tr></thead>
+        <tbody>
+          <tr><td>封底板1</td><td><input type="number" id="lpc1_area" min="0" step="0.001" placeholder="CAD量取" oninput="calc()"></td><td><input type="number" id="lpc1_t" value="2" min="0" step="0.5" oninput="calc()"></td><td><input type="number" id="lpc1_n" value="0" min="0" step="1" oninput="calc()"></td><td><input id="lpc1_total" readonly></td></tr>
+          <tr><td>封底板2</td><td><input type="number" id="lpc2_area" min="0" step="0.001" placeholder="可选" oninput="calc()"></td><td><input type="number" id="lpc2_t" value="2" min="0" step="0.5" oninput="calc()"></td><td><input type="number" id="lpc2_n" value="0" min="0" step="1" oninput="calc()"></td><td><input id="lpc2_total" readonly></td></tr>
+          <tr><td>封底板3</td><td><input type="number" id="lpc3_area" min="0" step="0.001" placeholder="可选" oninput="calc()"></td><td><input type="number" id="lpc3_t" value="2" min="0" step="0.5" oninput="calc()"></td><td><input type="number" id="lpc3_n" value="0" min="0" step="1" oninput="calc()"></td><td><input id="lpc3_total" readonly></td></tr>
+        </tbody>
+      </table>
+      <div class="sub-card" style="display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:12px;color:var(--text2)">如果封底和平台板面积一致，也建议单独填一行，厚度按封底板厚。</span>
+        <span style="font-weight:700;color:var(--navy)">封底合计：<span id="lpc_total_text">0.0</span> kg</span>
+      </div>
+    </div>
+
+    <!-- 加强筋 -->
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div style="font-size:13px;font-weight:600">加强筋 <span style="font-size:11px;background:var(--amber-bg);color:var(--amber);border-radius:3px;padding:1px 5px;margin-left:4px">待定</span></div>
+        <div style="font-size:11px;color:var(--text3)">板厚 × 宽 × 高 × 7850 × 每步根数 × 步数</div>
+      </div>
+      <div class="g5">
+        <div class="field"><label>板厚（mm）</label><input type="number" id="st_t" placeholder="待定" oninput="calc()"></div>
+        <div class="field"><label>宽度（mm）</label><input type="number" id="st_w" placeholder="待定" oninput="calc()"></div>
+        <div class="field"><label>高度（mm）</label><input type="number" id="st_h" placeholder="待定" oninput="calc()"></div>
+        <div class="field"><label>每步根数</label><input type="number" id="st_n" placeholder="待定" oninput="calc()"></div>
+        <div class="field"><label>合计<span class="auto">实时</span></label><div id="st_live" class="tbd" style="margin-top:6px">待填写</div></div>
+      </div>
+    </div>
+
+    <!-- 内部封板 -->
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div style="font-size:13px;font-weight:600">内部封板 <span style="font-size:11px;background:var(--amber-bg);color:var(--amber);border-radius:3px;padding:1px 5px;margin-left:4px">待定</span></div>
+        <div style="font-size:11px;color:var(--text3)">板厚 × 宽 × 高 × 7850 × 每步块数 × 步数</div>
+      </div>
+      <div class="g5">
+        <div class="field"><label>板厚（mm）</label><input type="number" id="ip_t" placeholder="待定" oninput="calc()"></div>
+        <div class="field"><label>单块宽（mm）</label><input type="number" id="ip_w" placeholder="待定" oninput="calc()"></div>
+        <div class="field"><label>单块高（mm）</label><input type="number" id="ip_h" placeholder="待定" oninput="calc()"></div>
+        <div class="field"><label>每步块数</label><input type="number" id="ip_n" placeholder="待定" oninput="calc()"></div>
+        <div class="field"><label>合计<span class="auto">实时</span></label><div id="ip_live" class="tbd" style="margin-top:6px">待填写</div></div>
+      </div>
+    </div>
+
+    <!-- 备注 -->
+    <div class="card">
+      <div class="field"><label>备注 / 说明</label><textarea id="notes" rows="3" style="width:100%;border:1px solid var(--border2);border-radius:var(--radius);padding:8px 10px;font-size:13px;resize:vertical;font-family:inherit;color:var(--text)" placeholder="如：矩管250×200×10×10（起步支座，待确认长度）；栏杆扶手规格待定……"></textarea></div>
+    </div>
+  </div>
+
+  <div style="display:flex;gap:10px;margin-top:8px;padding-bottom:32px">
+    <button class="btn btn-primary" onclick="showResult()" style="flex:1;padding:11px;font-size:14px;font-weight:600">计算结果 →</button>
+    <button class="btn" onclick="saveData()">保存</button>
+    <button class="btn" onclick="resetAll()">重置</button>
+  </div>
+
+  <!-- 结果区 -->
+  <div class="result-panel" id="result-panel">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <div style="font-size:18px;font-weight:700">计算结果</div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-sm" onclick="exportExcelFile()">导出Excel</button>
+        <button class="btn btn-sm" onclick="window.print()">打印 / 导出PDF</button>
+      </div>
+    </div>
+    <div class="geo-summary" id="geo-summary"></div>
+    <div class="metrics-grid" id="metrics-grid"></div>
+    <div class="card" style="margin-bottom:16px">
+      <div class="calc-title">各构件重量明细</div>
+      <table class="detail-table" id="detail-table"><thead><tr><th>构件</th><th>规格 & 计算式</th><th style="text-align:right">重量（kg）</th><th style="text-align:right">占比</th></tr></thead><tbody id="detail-body"></tbody></table>
+    </div>
+    <div class="card" style="margin-bottom:16px">
+      <div class="calc-title">重量占比</div>
+      <div id="bar-section"></div>
+    </div>
+    <div class="card">
+      <div class="calc-title">详细计算过程</div>
+      <div id="calc-process"></div>
+    </div>
+  </div>
+
+</div>
+</div>
+</div>
+
+<div class="save-toast" id="save-toast">已保存到本地</div>
+
+<script>
+const ρ=7850;
+const v=id=>{const e=document.getElementById(id);return e?parseFloat(e.value)||0:0};
+const vr=id=>{const e=document.getElementById(id);return e?e.value.trim():''};
+const setV=(id,val,dec=1)=>{const e=document.getElementById(id);if(e)e.value=typeof val==='number'?val.toFixed(dec):val};
+let arcMode='total';
+let beamMode='none';
+
+function setBeamMode(mode){
+  beamMode=mode;
+  document.getElementById('beam_btn_none').classList.toggle('active',mode==='none');
+  document.getElementById('beam_btn_yes').classList.toggle('active',mode==='yes');
+  document.getElementById('beam-fields').style.display=mode==='yes'?'block':'none';
+  if(mode==='none'){
+    ['ob_H','ob_B','ob_t','ib_H','ib_B','ib_t'].forEach(id=>setV(id,0,0));
+  }
+  calc();
+}
+
+function syncBasic(){
+  const fh=v('floor_h'),s=v('steps');
+  const sh=s>0?fh/s:0;
+  setV('step_h',sh,1); setV('step_rise',sh,1); setV('rs_W',sh,1);
+  document.getElementById('step_h_sub').textContent=`${fh}÷${s}=${sh.toFixed(1)}mm`;
+  document.getElementById('height').value=fh;
+  syncWidths();
+}
+function syncWidths(){
+  const wo=v('step_w_out'),wi=v('step_w_in'),s=v('steps');
+  const wm=(wo+wi)/2;
+  setV('step_w_mid',wm,1);
+  document.getElementById('mid_sub').textContent=`(${wo}+${wi})÷2=${wm.toFixed(1)}mm`;
+  setV('mb_bl',wm,1);
+  document.getElementById('mb_bl_sub').textContent=`(${wo}+${wi})÷2=${wm.toFixed(1)}mm`;
+  setV('tr_W',wm,1);
+  if(arcMode==='step'){
+    document.getElementById('arc_out').value=(wo*s/1000).toFixed(3);
+    document.getElementById('arc_in').value=(wi*s/1000).toFixed(3);
+    document.getElementById('auto_out').textContent=(wo*s/1000).toFixed(3);
+    document.getElementById('auto_in').textContent=(wi*s/1000).toFixed(3);
+  }
+  calcSlant();
+}
+function syncLen(){
+  const L=v('step_len');
+  setV('tr_L',L,0); setV('rs_L',L,0);
+  calc();
+}
+function setArcMode(m){
+  arcMode=m;
+  document.getElementById('arc_total_div').style.display=m==='total'?'block':'none';
+  document.getElementById('arc_step_div').style.display=m==='step'?'block':'none';
+  const bt=document.getElementById('arc_btn_total'), bs=document.getElementById('arc_btn_step');
+  bt.style.cssText=m==='total'?'background:var(--navy);color:#fff;border-color:var(--navy)':'';
+  bs.style.cssText=m==='step'?'background:var(--navy);color:#fff;border-color:var(--navy)':'';
+  if(m==='step') syncWidths(); else calcSlant();
+}
+function calcSlant(){
+  const H=v('height')/1000,ao=v('arc_out'),ai=v('arc_in');
+  const Lo=Math.sqrt(ao**2+H**2), Li=Math.sqrt(ai**2+H**2);
+  setV('L_out',Lo,3); setV('L_in',Li,3);
+  document.getElementById('h_out_sub').textContent=`√(${ao}²+${H.toFixed(3)}²)=${Lo.toFixed(3)}m`;
+  document.getElementById('h_in_sub').textContent=`√(${ai}²+${H.toFixed(3)}²)=${Li.toFixed(3)}m`;
+  calc();
+}
+function boxA(H,B,t){
+  if(H<=0||B<=0||t<=0||H<=2*t||B<=2*t)return 0;
+  return H*B-(H-2*t)*(B-2*t);
+}
+function pW(t,h,L){return (t/1000)*(h/1000)*L*ρ;}
+
+function calc(){
+  const steps=v('steps'), Lo=v('L_out'), Li=v('L_in');
+  // 梯梁
+  const A_ob=boxA(v('ob_H'),v('ob_B'),v('ob_t')), q_ob=A_ob*1e-6*ρ;
+  const A_ib=boxA(v('ib_H'),v('ib_B'),v('ib_t')), q_ib=A_ib*1e-6*ρ;
+  const W_ob=q_ob*Lo, W_ib=q_ib*Li;
+  setV('ob_q',q_ob,2); setV('ib_q',q_ib,2);
+  // 高箱体
+  const W_oh=pW(v('oh_t1'),v('oh_h1'),Lo)+pW(v('oh_t2'),v('oh_h2'),Lo)+pW(v('oh_t3'),v('oh_h3'),Lo);
+  const W_ih=pW(v('ih_t1'),v('ih_h1'),Li)+pW(v('ih_t2'),v('ih_h2'),Li)+pW(v('ih_t3'),v('ih_h3'),Li);
+  setV('oh_total',W_oh,1); setV('ih_total',W_ih,1);
+  // 横梁
+  const A_cb=boxA(v('cb_H'),v('cb_B'),v('cb_t')), q_cb=A_cb*1e-6*ρ;
+  const W_cb=q_cb*(v('cb_L')/1000)*steps;
+  setV('cb_q',q_cb,2);
+  // 踏立板
+  const W_tr=(v('tr_L')/1000)*(v('tr_W')/1000)*(v('tr_t')/1000)*ρ*steps;
+  const W_rs=(v('rs_L')/1000)*(v('rs_W')/1000)*(v('rs_t')/1000)*ρ*steps;
+  setV('tr_total',W_tr,1); setV('rs_total',W_rs,1);
+  // 封底
+  const mb_bl=v('mb_bl');
+  const W_mb_e=(v('mb_bt')/1000)*(v('mb_bw')/1000)*(mb_bl/1000)*ρ;
+  const W_bot=W_mb_e*steps;
+  setV('mb_total',W_bot,1);
+  // 休台 / 平台板
+  const lpRows=[1,2,3,4].map(i=>{
+    const w=v(`lp${i}_area`)*(v(`lp${i}_t`)/1000)*ρ*v(`lp${i}_n`);
+    setV(`lp${i}_total`,w,1);
+    return {i,w,area:v(`lp${i}_area`),t:v(`lp${i}_t`),n:v(`lp${i}_n`)};
+  });
+  const W_lp=lpRows.reduce((sum,row)=>sum+row.w,0);
+  document.getElementById('lp_total_text').textContent=W_lp.toFixed(1);
+  // 休台封底板
+  const lpcRows=[1,2,3].map(i=>{
+    const w=v(`lpc${i}_area`)*(v(`lpc${i}_t`)/1000)*ρ*v(`lpc${i}_n`);
+    setV(`lpc${i}_total`,w,1);
+    return {i,w,area:v(`lpc${i}_area`),t:v(`lpc${i}_t`),n:v(`lpc${i}_n`)};
+  });
+  const W_lpc=lpcRows.reduce((sum,row)=>sum+row.w,0);
+  document.getElementById('lpc_total_text').textContent=W_lpc.toFixed(1);
+  // 加强筋
+  const st_ok=vr('st_t')&&vr('st_w')&&vr('st_h')&&vr('st_n');
+  const W_st=st_ok?(v('st_t')/1000)*(v('st_w')/1000)*(v('st_h')/1000)*ρ*v('st_n')*steps:0;
+  const stEl=document.getElementById('st_live');
+  stEl.textContent=st_ok?W_st.toFixed(1)+' kg':'待填写';
+  stEl.className=st_ok?'live':'tbd';
+  // 内部封板
+  const ip_ok=vr('ip_t')&&vr('ip_w')&&vr('ip_h')&&vr('ip_n');
+  const W_ip=ip_ok?(v('ip_t')/1000)*(v('ip_w')/1000)*(v('ip_h')/1000)*ρ*v('ip_n')*steps:0;
+  const ipEl=document.getElementById('ip_live');
+  ipEl.textContent=ip_ok?W_ip.toFixed(1)+' kg':'待填写';
+  ipEl.className=ip_ok?'live':'tbd';
+
+  const sub=W_ob+W_oh+W_ib+W_ih+W_cb+W_tr+W_rs+W_lp+W_lpc+W_st+W_bot+W_ip;
+  const ext=sub*(v('extra_pct')/100), tot=sub+ext, backup=tot*(1+v('waste_pct')/100);
+  window._d={W_ob,W_oh,W_ib,W_ih,W_cb,W_tr,W_rs,W_lp,W_lpc,W_st,W_bot,W_ip,W_mb_e,mb_bl,lpRows,lpcRows,
+    sub,ext,tot,backup,steps,Lo,Li,q_ob,q_ib,q_cb,A_ob,A_ib,A_cb,st_ok,ip_ok};
+}
+
+function showResult(){
+  document.getElementById('result-panel').classList.add('show');
+  document.getElementById('result-panel').scrollIntoView({behavior:'smooth',block:'start'});
+  renderResult();
+}
+
+function renderResult(){
+  const d=window._d;
+  const fmt=n=>n.toFixed(1);
+  const fh=v('floor_h'), s=v('steps'), sh=s>0?fh/s:0;
+
+  // 基本参数摘要
+  const geoData=[['层高',fh+'mm'],['踏步数',s+'步'],['步高',sh.toFixed(1)+'mm'],['步长',v('step_len')+'mm'],
+    ['外弧步宽',v('step_w_out')+'mm'],['内弧步宽',v('step_w_in')+'mm'],['中间步宽',v('step_w_mid')+'mm'],['附加系数',v('extra_pct')+'%']];
+  document.getElementById('geo-summary').innerHTML=geoData.map(([k,val])=>
+    `<div class="geo-item"><div class="gk">${k}</div><div class="gv">${val}</div></div>`).join('');
+
+  // 指标卡
+  document.getElementById('metrics-grid').innerHTML=`
+    <div class="metric-card"><div class="ml">主构件小计</div><div class="mv">${(d.sub/1000).toFixed(3)}<span class="mu">t</span></div></div>
+    <div class="metric-card highlight"><div class="ml">合计（含附加）</div><div class="mv">${(d.tot/1000).toFixed(3)}<span class="mu">t</span></div></div>
+    <div class="metric-card"><div class="ml">建议备料</div><div class="mv">${(d.backup/1000).toFixed(3)}<span class="mu">t</span></div></div>
+    <div class="metric-card"><div class="ml">每步平均</div><div class="mv">${(d.tot/d.steps).toFixed(0)}<span class="mu">kg</span></div></div>`;
+
+  // 明细表
+  const items=[
+    ['外弧箱型梁',`${v('ob_H')}×${v('ob_B')}×${v('ob_t')}mm，${d.q_ob.toFixed(2)}kg/m×${d.Lo.toFixed(3)}m`,d.W_ob,true],
+    ['外弧高箱体',`三块板，斜长${d.Lo.toFixed(3)}m`,d.W_oh,true],
+    ['内弧箱型梁',`${v('ib_H')}×${v('ib_B')}×${v('ib_t')}mm，${d.q_ib.toFixed(2)}kg/m×${d.Li.toFixed(3)}m`,d.W_ib,true],
+    ['内弧高箱体',`三块板，斜长${d.Li.toFixed(3)}m`,d.W_ih,true],
+    ['联系横梁',`${v('cb_H')}×${v('cb_B')}×${v('cb_t')}mm，${v('cb_L')}mm/根×${d.steps}根`,d.W_cb,true],
+    ['踏板',`${v('tr_L')}×${v('tr_W')}×${v('tr_t')}mm，×${d.steps}步`,d.W_tr,true],
+    ['立板',`${v('rs_L')}×${v('rs_W')}×${v('rs_t')}mm，×${d.steps}步`,d.W_rs,true],
+    ['休台/平台板',d.W_lp>0?d.lpRows.filter(r=>r.w>0).map(r=>`板${r.i}:${r.area}m²×${r.t}mm×${r.n}`).join('；'):'未填写/不计入',d.W_lp,d.W_lp>0],
+    ['休台封底板',d.W_lpc>0?d.lpcRows.filter(r=>r.w>0).map(r=>`封${r.i}:${r.area}m²×${r.t}mm×${r.n}`).join('；'):'未填写/不计入',d.W_lpc,d.W_lpc>0],
+    ['加强筋',d.st_ok?`${v('st_t')}×${v('st_w')}×${v('st_h')}mm，${v('st_n')}根/步×${d.steps}步`:'参数待填',d.W_st,d.st_ok],
+    ['封底板',`取中弧${d.mb_bl.toFixed(1)}mm，${v('mb_bw')}mm宽×${v('mb_bt')}mm厚×${d.steps}步`,d.W_bot,true],
+    ['内部封板',d.ip_ok?`${v('ip_t')}×${v('ip_w')}×${v('ip_h')}mm，${v('ip_n')}块/步×${d.steps}步`:'参数待填',d.W_ip,d.ip_ok],
+  ];
+  const tbody=document.getElementById('detail-body');
+  tbody.innerHTML=items.filter(x=>x[3]||!x[3]).map(([name,formula,W,ready])=>`
+    <tr><td><div class="name">${name}${!ready?'<span class="badge-tbd" style="margin-left:6px">待填</span>':''}</div>
+    <div class="formula">${formula}</div></td>
+    <td style="text-align:right;font-weight:500">${ready&&W>0?W.toFixed(1)+' kg':'—'}</td>
+    <td style="text-align:right;color:var(--text3);font-size:12px">${ready&&W>0&&d.sub>0?(W/d.sub*100).toFixed(1)+'%':'—'}</td></tr>`).join('')+
+  `<tr class="total-row"><td colspan="2"><b>主构件小计</b></td><td style="text-align:right"><b>${fmt(d.sub)} kg</b></td></tr>
+   <tr class="extra-row"><td colspan="2">焊接/连接件附加 +${v('extra_pct')}%</td><td style="text-align:right">${fmt(d.ext)} kg</td></tr>
+   <tr class="grand-row"><td colspan="2"><b>合计（不含栏杆）</b></td><td style="text-align:right"><b>${fmt(d.tot)} kg = ${(d.tot/1000).toFixed(3)} t</b></td></tr>
+   <tr class="backup-row"><td colspan="2">建议备料（+${v('waste_pct')}%损耗）</td><td style="text-align:right"><b>${(d.backup/1000).toFixed(3)} t</b></td></tr>`;
+
+  // 条形图
+  const vis=items.filter(x=>x[3]&&x[2]>0), mx=Math.max(...vis.map(x=>x[2]));
+  const COLORS=['#1a56db','#3b82f6','#1d9e75','#0f6e56','#ba7517','#639922','#97c459','#e24b4a','#d85a30','#993c1d'];
+  document.getElementById('bar-section').innerHTML=vis.map(([n,f,W],i)=>`
+    <div class="bar-row">
+      <div class="bar-name">${n}</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${(W/mx*100).toFixed(0)}%;background:${COLORS[i%COLORS.length]}"></div></div>
+      <div class="bar-val">${W.toFixed(0)} kg</div>
+    </div>`).join('');
+
+  // 计算过程
+  const Lo=d.Lo, Li=d.Li;
+  document.getElementById('calc-process').innerHTML=`
+    <div class="calc-title" style="margin-top:0">斜长</div>
+    <div class="calc-block">外弧：√(${v('arc_out')}²+${(v('height')/1000).toFixed(3)}²) = ${Lo.toFixed(3)} m
+内弧：√(${v('arc_in')}²+${(v('height')/1000).toFixed(3)}²) = ${Li.toFixed(3)} m</div>
+    <div class="calc-title">梯梁（外形扣内空）</div>
+    <div class="calc-block">外弧：${v('ob_H')}×${v('ob_B')} - ${v('ob_H')-2*v('ob_t')}×${v('ob_B')-2*v('ob_t')} = ${d.A_ob.toLocaleString()}mm²，${d.q_ob.toFixed(2)}kg/m × ${Lo.toFixed(3)}m = ${d.W_ob.toFixed(1)} kg
+内弧：${v('ib_H')}×${v('ib_B')} - ${v('ib_H')-2*v('ib_t')}×${v('ib_B')-2*v('ib_t')} = ${d.A_ib.toLocaleString()}mm²，${d.q_ib.toFixed(2)}kg/m × ${Li.toFixed(3)}m = ${d.W_ib.toFixed(1)} kg</div>
+    <div class="calc-title">高箱体</div>
+    <div class="calc-block">外弧：${v('oh_t1')}mm×${v('oh_h1')}mm = ${pW(v('oh_t1'),v('oh_h1'),Lo).toFixed(1)}kg + ${v('oh_t2')}mm×${v('oh_h2')}mm = ${pW(v('oh_t2'),v('oh_h2'),Lo).toFixed(1)}kg + 封板 = ${pW(v('oh_t3'),v('oh_h3'),Lo).toFixed(1)}kg → ${d.W_oh.toFixed(1)} kg
+内弧：${v('ih_t1')}mm×${v('ih_h1')}mm = ${pW(v('ih_t1'),v('ih_h1'),Li).toFixed(1)}kg + ${v('ih_t2')}mm×${v('ih_h2')}mm = ${pW(v('ih_t2'),v('ih_h2'),Li).toFixed(1)}kg + 封板 = ${pW(v('ih_t3'),v('ih_h3'),Li).toFixed(1)}kg → ${d.W_ih.toFixed(1)} kg</div>
+    <div class="calc-title">联系横梁</div>
+    <div class="calc-block">${d.A_cb.toLocaleString()}mm²，${d.q_cb.toFixed(2)}kg/m × ${(v('cb_L')/1000).toFixed(3)}m = ${(d.q_cb*v('cb_L')/1000).toFixed(1)}kg/根 × ${d.steps}根 = ${d.W_cb.toFixed(1)} kg</div>
+    <div class="calc-title">踏板 & 立板</div>
+    <div class="calc-block">踏板：${v('tr_L')}×${v('tr_W')}×${v('tr_t')}mm，单块=${(v('tr_L')/1000*v('tr_W')/1000*v('tr_t')/1000*ρ).toFixed(2)}kg × ${d.steps}步 = ${d.W_tr.toFixed(1)} kg
+立板：${v('rs_L')}×${v('rs_W')}×${v('rs_t')}mm，单块=${(v('rs_L')/1000*v('rs_W')/1000*v('rs_t')/1000*ρ).toFixed(2)}kg × ${d.steps}步 = ${d.W_rs.toFixed(1)} kg</div>
+    <div class="calc-title">封底板（取中弧）</div>
+    <div class="calc-block">${v('mb_bt')}mm × ${v('mb_bw')}mm × ${d.mb_bl.toFixed(1)}mm × 7850 = ${d.W_mb_e.toFixed(3)}kg/步 × ${d.steps}步 = ${d.W_bot.toFixed(1)} kg</div>
+    ${d.W_lp>0?`<div class="calc-title">休台 / 平台板</div><div class="calc-block">${d.lpRows.filter(r=>r.w>0).map(r=>`板${r.i}：${r.area}m² × ${r.t}mm × 7850 × ${r.n} = ${r.w.toFixed(1)} kg`).join('\n')} \n合计 = ${d.W_lp.toFixed(1)} kg</div>`:''}
+    ${d.W_lpc>0?`<div class="calc-title">休台封底板</div><div class="calc-block">${d.lpcRows.filter(r=>r.w>0).map(r=>`封底${r.i}：${r.area}m² × ${r.t}mm × 7850 × ${r.n} = ${r.w.toFixed(1)} kg`).join('\n')} \n合计 = ${d.W_lpc.toFixed(1)} kg</div>`:''}
+    ${d.st_ok?`<div class="calc-title">加强筋</div><div class="calc-block">${v('st_t')}×${v('st_w')}×${v('st_h')}mm×7850×${v('st_n')}根/步×${d.steps}步 = ${d.W_st.toFixed(1)} kg</div>`:''}
+    ${d.ip_ok?`<div class="calc-title">内部封板</div><div class="calc-block">${v('ip_t')}×${v('ip_w')}×${v('ip_h')}mm×7850×${v('ip_n')}块/步×${d.steps}步 = ${d.W_ip.toFixed(1)} kg</div>`:''}
+    ${vr('notes')?`<div class="calc-title">备注</div><div class="calc-block">${vr('notes')}</div>`:''}
+  `;
+}
+
+function escapeHtml(text){
+  return String(text||'').replace(/[&<>"']/g,ch=>({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  }[ch]));
+}
+
+function projectFileName(){
+  const name=vr('project_name')||'钢结构旋转楼梯重量计算书';
+  return name.replace(/[\\/:*?"<>|]/g,'_').trim()||'钢结构旋转楼梯重量计算书';
+}
+
+function inputSummaryHtml(){
+  const rows=[
+    ['项目名称',vr('project_name')||'未填写'],
+    ['生成日期',new Date().toLocaleDateString('zh-CN')],
+    ['层高',v('floor_h')+' mm'],
+    ['踏步数',v('steps')+' 步'],
+    ['步高',(v('steps')>0?(v('floor_h')/v('steps')).toFixed(1):'0')+' mm'],
+    ['步长',v('step_len')+' mm'],
+    ['外弧水平弧长',v('arc_out')+' m'],
+    ['内弧水平弧长',v('arc_in')+' m'],
+    ['外弧斜长',v('L_out')+' m'],
+    ['内弧斜长',v('L_in')+' m'],
+    ['附加系数',v('extra_pct')+'%'],
+    ['备料损耗',v('waste_pct')+'%']
+  ];
+  return `<table class="doc-table">${rows.map(([k,val])=>
+    `<tr><th>${escapeHtml(k)}</th><td>${escapeHtml(val)}</td></tr>`).join('')}</table>`;
+}
+
+function buildExcelHtml(){
+  showResult();
+  const d=window._d;
+  const project=vr('project_name')||'钢结构旋转楼梯重量计算书';
+  const f1=n=>(Number(n)||0).toFixed(1);
+  const f3=n=>(Number(n)||0).toFixed(3);
+  const pct=w=>d.sub>0?(w/d.sub*100).toFixed(1):'';
+  const itemRows=[
+    [1,'外弧高箱体',`三块板：${v('oh_t1')}mm×${v('oh_h1')} + ${v('oh_t2')}mm×${v('oh_h2')} + ${v('oh_t3')}mm封板×${v('oh_h3')}`,`斜长${f3(d.Lo)}m`,'—',d.W_oh,'外弧侧板'],
+    [2,'外弧箱型梁',`${v('ob_H')}×${v('ob_B')}×${v('ob_t')}mm 箱型梁`,`斜长${f3(d.Lo)}m`,`${d.q_ob.toFixed(2)}kg/m`,d.W_ob,'外弧主梁'],
+    [3,'内弧高箱体',`三块板：${v('ih_t1')}mm×${v('ih_h1')} + ${v('ih_t2')}mm×${v('ih_h2')} + ${v('ih_t3')}mm封板×${v('ih_h3')}`,`斜长${f3(d.Li)}m`,'—',d.W_ih,'内弧侧板'],
+    [4,'内弧箱型梁',`${v('ib_H')}×${v('ib_B')}×${v('ib_t')}mm 箱型梁`,`斜长${f3(d.Li)}m`,`${d.q_ib.toFixed(2)}kg/m`,d.W_ib,'内弧主梁'],
+    [5,'联系横梁',`${v('cb_H')}×${v('cb_B')}×${v('cb_t')}mm 箱型梁`,`${d.steps}根×${(v('cb_L')/1000).toFixed(3)}m`,`${(d.W_cb/d.steps).toFixed(1)}kg/根`,d.W_cb,'每步一根'],
+    [6,'踏板',`${v('tr_t')}mm钢板，长${v('tr_L')}×宽${v('tr_W')}mm`,`${d.steps}步`,`${(d.W_tr/d.steps).toFixed(1)}kg/步`,d.W_tr,'取中弧步宽'],
+    [7,'立板',`${v('rs_t')}mm钢板，长${v('rs_L')}×高${v('rs_W')}mm`,`${d.steps}步`,`${(d.W_rs/d.steps).toFixed(1)}kg/步`,d.W_rs,'步高同步'],
+    [8,'封底板',`${v('mb_bt')}mm钢板，宽${v('mb_bw')}×中弧${d.mb_bl.toFixed(1)}mm`,`${d.steps}步`,`${(d.W_bot/d.steps).toFixed(2)}kg/步`,d.W_bot,'附加构件']
+  ];
+  d.lpRows.filter(r=>r.w>0).forEach(r=>{
+    itemRows.push([9,`休台/平台板${r.i}`,`${r.t}mm钢板，面积${r.area}m²`,`${r.n}处`,`${(r.w/r.n).toFixed(1)}kg/处`,r.w,'CAD量面积']);
+  });
+  d.lpcRows.filter(r=>r.w>0).forEach(r=>{
+    itemRows.push([9,`休台封底板${r.i}`,`${r.t}mm钢板，面积${r.area}m²`,`${r.n}处`,`${(r.w/r.n).toFixed(1)}kg/处`,r.w,'休台封底']);
+  });
+  if(d.st_ok) itemRows.push([9,'加强筋',`${v('st_t')}×${v('st_w')}×${v('st_h')}mm`,`${v('st_n')}根/步×${d.steps}步`,`${(d.W_st/d.steps).toFixed(1)}kg/步`,d.W_st,'已计入']);
+  if(d.ip_ok) itemRows.push([10,'内部封板',`${v('ip_t')}×${v('ip_w')}×${v('ip_h')}mm`,`${v('ip_n')}块/步×${d.steps}步`,`${(d.W_ip/d.steps).toFixed(1)}kg/步`,d.W_ip,'已计入']);
+  itemRows.forEach((row,index)=>{row[0]=index+1;});
+  const componentRows=itemRows.map((r,i)=>`
+    <tr class="${i%2?'alt':''}">
+      <td>${r[0]}</td><td class="name">${escapeHtml(r[1])}</td><td>${escapeHtml(r[2])}</td>
+      <td>${escapeHtml(r[3])}</td><td>${escapeHtml(r[4])}</td>
+      <td class="num strong">${f1(r[5])}</td><td class="num">${f3(r[5]/1000)}</td><td class="num">${pct(r[5])}</td><td>${escapeHtml(r[6])}</td>
+    </tr>`).join('');
+  const calcRows=[];
+  const calcChildren=[...document.getElementById('calc-process').children];
+  for(let i=0;i<calcChildren.length;i++){
+    if(calcChildren[i].classList.contains('calc-title')){
+      const title=calcChildren[i].textContent.trim();
+      const block=calcChildren[i+1]&&calcChildren[i+1].classList.contains('calc-block')?calcChildren[i+1].textContent.trim():'';
+      calcRows.push(`<tr><th>${escapeHtml(title)}</th><td><pre>${escapeHtml(block)}</pre></td></tr>`);
+    }
+  }
+  const projectLine=`项目：${project}  |  外弧斜长${f3(d.Lo)}m  |  内弧斜长${f3(d.Li)}m  |  ${new Date().toLocaleDateString('zh-CN')}`;
+  const notes=vr('notes')?`<tr class="note"><td colspan="9">备注：${escapeHtml(vr('notes'))}</td></tr>`:'';
+  const calcTableRows=[
+    [1,'外弧水平弧长',v('arc_out').toFixed(3),'m','输入/CAD量取'],
+    [2,'内弧水平弧长',v('arc_in').toFixed(3),'m','输入/CAD量取'],
+    [3,'钢梯总高度 H',v('height').toFixed(0),'mm','输入'],
+    [4,'外弧展开斜长',f3(d.Lo),'m',`√(${v('arc_out')}²+${(v('height')/1000).toFixed(3)}²)`],
+    [5,'内弧展开斜长',f3(d.Li),'m',`√(${v('arc_in')}²+${(v('height')/1000).toFixed(3)}²)`],
+    [6,'踏步数',d.steps,'步','输入'],
+    [7,'中间步宽',v('step_w_mid').toFixed(1),'mm','(外弧步宽+内弧步宽)÷2'],
+    [8,'钢材密度',ρ,'kg/m³','标准值'],
+    [9,'附加系数',v('extra_pct'),'%','焊接/连接件'],
+    [10,'备料损耗',v('waste_pct'),'%','加工损耗']
+  ].map((r,i)=>`<tr class="${i%2?'alt':''}"><td>${r[0]}</td><td>${escapeHtml(r[1])}</td><td class="num input">${r[2]}</td><td>${escapeHtml(r[3])}</td><td>${escapeHtml(r[4])}</td></tr>`).join('');
+  return `<!DOCTYPE html>
+<html xmlns:o="urn:schemas-microsoft-com:office:office"
+      xmlns:x="urn:schemas-microsoft-com:office:excel"
+      xmlns="http://www.w3.org/TR/REC-html40">
+<head>
+<meta charset="UTF-8">
+<title>${escapeHtml(project)}</title>
+<!--[if gte mso 9]>
+<xml>
+  <x:ExcelWorkbook>
+    <x:ExcelWorksheets>
+      <x:ExcelWorksheet>
+        <x:Name>重量计算书</x:Name>
+        <x:WorksheetOptions>
+          <x:DisplayGridlines/>
+        </x:WorksheetOptions>
+      </x:ExcelWorksheet>
+    </x:ExcelWorksheets>
+  </x:ExcelWorkbook>
+</xml>
+<![endif]-->
+<style>
+@page{size:A4;margin:1.8cm}
+body{font-family:"Microsoft YaHei","PingFang SC",Arial,sans-serif;color:#1a1917;font-size:11pt;background:#fff}
+table{border-collapse:collapse;width:100%;mso-border-alt:solid #d9d9d9 .5pt}
+td,th{border:1px solid #d0cec6;padding:6px 8px;vertical-align:middle;mso-number-format:"\\@";word-break:break-all}
+.title td{background:#1f4e79;color:#fff;font-size:22px;font-weight:700;text-align:center;height:38px}
+.meta td{background:#f2f2f2;color:#595959;text-align:center;height:22px}
+.section td{background:#1f4e79;color:#fff;font-weight:700;font-size:14px;text-align:left;height:26px}
+.head th{background:#bdd7ee;color:#000;font-weight:700;text-align:center}
+.alt td{background:#f2f2f2}
+.name{font-weight:700}
+.num{text-align:center;mso-number-format:"0.0"}
+.strong{font-weight:700;color:#1f4e79}
+.input{background:#fff2cc!important;color:#1f4e79;font-weight:700}
+.total td{background:#eef3fd;font-weight:700;color:#1f4e79}
+.grand td{background:#1f4e79;color:#fff;font-weight:700}
+.backup td{background:#e2f0d9;color:#15803d;font-weight:700}
+.note td{background:#fff2cc;color:#7f6000}
+pre{white-space:pre-wrap;margin:0;font-family:Consolas,"Microsoft YaHei",monospace;font-size:10pt;line-height:1.4}
+</style>
+</head>
+<body>
+<table>
+  <col style="width:48px"><col style="width:180px"><col style="width:330px"><col style="width:110px"><col style="width:130px"><col style="width:110px"><col style="width:90px"><col style="width:90px"><col style="width:140px">
+  <tr class="title"><td colspan="9">旋转钢楼梯重量计算表</td></tr>
+  <tr class="meta"><td colspan="9">${escapeHtml(projectLine)}</td></tr>
+  <tr><td colspan="9">&nbsp;</td></tr>
+  <tr class="section"><td colspan="9">一、重量汇总（总数一览）</td></tr>
+  <tr class="head"><th>序号</th><th>构件名称</th><th>规格/说明</th><th>数量</th><th>单件/单步重(kg)</th><th>合计重(kg)</th><th>合计(t)</th><th>占比(%)</th><th>备注</th></tr>
+  ${componentRows}
+  <tr class="total"><td colspan="5">主构件小计</td><td class="num">${f1(d.sub)}</td><td class="num">${f3(d.sub/1000)}</td><td></td><td></td></tr>
+  <tr><td colspan="5">焊接、连接件附加（×${v('extra_pct')}%）</td><td class="num">${f1(d.ext)}</td><td class="num">${f3(d.ext/1000)}</td><td></td><td></td></tr>
+  <tr class="grand"><td colspan="5">合计（不含栏杆）</td><td class="num">${f1(d.tot)}</td><td class="num">${f3(d.tot/1000)}</td><td></td><td></td></tr>
+  <tr class="backup"><td colspan="5">建议备料（+${v('waste_pct')}%损耗）</td><td class="num">${f1(d.backup)}</td><td class="num">${f3(d.backup/1000)}</td><td></td><td></td></tr>
+  ${notes}
+  <tr><td colspan="9">&nbsp;</td></tr>
+  <tr class="section"><td colspan="9">二、基本参数与计算依据</td></tr>
+  <tr class="head"><th>序号</th><th>参数名称</th><th>数值</th><th>单位</th><th colspan="5">来源说明 / 计算式</th></tr>
+  ${calcTableRows}
+  <tr><td colspan="9">&nbsp;</td></tr>
+  <tr class="section"><td colspan="9">三、详细计算过程</td></tr>
+  <tr class="head"><th colspan="2">项目</th><th colspan="7">计算过程</th></tr>
+  ${calcRows.map(r=>r.replace('<tr>','<tr>').replace('<th>','<th colspan="2">').replace('<td>','<td colspan="7">')).join('')}
+</table>
+</body>
+</html>`;
+}
+
+function exportExcelFile(){
+  const html=buildExcelHtml();
+  const blob=new Blob(['\ufeff',html],{type:'application/vnd.ms-excel;charset=utf-8'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=projectFileName()+'.xls';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(a.href);
+}
+
+function saveData(){
+  const ids=['project_name','floor_h','steps','height','step_w_out','step_w_in','step_len',
+    'extra_pct','waste_pct','arc_out','arc_in','L_out','L_in',
+    'ob_H','ob_B','ob_t','ib_H','ib_B','ib_t',
+    'oh_t1','oh_h1','oh_t2','oh_h2','oh_t3','oh_h3',
+    'ih_t1','ih_h1','ih_t2','ih_h2','ih_t3','ih_h3',
+    'cb_H','cb_B','cb_t','cb_L','tr_L','tr_W','tr_t','rs_L','rs_W','rs_t',
+    'mb_bt','mb_bw',
+    'lp1_area','lp1_t','lp1_n','lp2_area','lp2_t','lp2_n','lp3_area','lp3_t','lp3_n','lp4_area','lp4_t','lp4_n',
+    'lpc1_area','lpc1_t','lpc1_n','lpc2_area','lpc2_t','lpc2_n','lpc3_area','lpc3_t','lpc3_n',
+    'st_t','st_w','st_h','st_n','ip_t','ip_w','ip_h','ip_n','notes'];
+  const data={};
+  ids.forEach(id=>{const e=document.getElementById(id);if(e)data[id]=e.value;});
+  data._arcMode=arcMode;
+  data._beamMode=beamMode;
+  localStorage.setItem('stair_calc_v5',JSON.stringify(data));
+  const t=document.getElementById('save-toast');
+  t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2000);
+}
+
+function loadData(){
+  const raw=localStorage.getItem('stair_calc_v5');
+  if(!raw){alert('没有找到保存的数据');return;}
+  const data=JSON.parse(raw);
+  Object.entries(data).forEach(([id,val])=>{
+    if(id==='_arcMode'){setArcMode(val);return;}
+    if(id==='_beamMode'){setBeamMode(val);return;}
+    const e=document.getElementById(id);if(e&&!e.readOnly)e.value=val;
+  });
+  setBeamMode(data._beamMode||'none');
+  syncBasic();
+  alert('已恢复上次保存的数据');
+}
+
+function resetAll(){
+  if(!confirm('确认重置所有数据？'))return;
+  const D={project_name:'',floor_h:5520,steps:34,height:5520,step_w_out:606,step_w_in:382,step_len:1300,
+    extra_pct:8,waste_pct:5,arc_out:20,arc_in:13,
+    ob_H:0,ob_B:0,ob_t:0,ib_H:0,ib_B:0,ib_t:0,
+    oh_t1:10,oh_h1:1150,oh_t2:8,oh_h2:850,oh_t3:10,oh_h3:60,
+    ih_t1:10,ih_h1:1150,ih_t2:8,ih_h2:850,ih_t3:10,ih_h3:60,
+    cb_H:300,cb_B:150,cb_t:16,cb_L:960,tr_t:5,rs_t:5,mb_bt:2,mb_bw:960,
+    lp1_area:'',lp1_t:5,lp1_n:0,lp2_area:'',lp2_t:5,lp2_n:0,lp3_area:'',lp3_t:5,lp3_n:0,lp4_area:'',lp4_t:5,lp4_n:0,
+    lpc1_area:'',lpc1_t:2,lpc1_n:0,lpc2_area:'',lpc2_t:2,lpc2_n:0,lpc3_area:'',lpc3_t:2,lpc3_n:0,
+    notes:''};
+  Object.entries(D).forEach(([id,val])=>{const e=document.getElementById(id);if(e&&!e.readOnly)e.value=val;});
+  ['st_t','st_w','st_h','st_n','ip_t','ip_w','ip_h','ip_n'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+  setArcMode('total');
+  setBeamMode('none');
+  document.getElementById('result-panel').classList.remove('show');
+  syncBasic();
+}
+
+function scrollTo(id){
+  const el=document.getElementById(id);
+  if(el)el.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function pW(t,h,L){return (t/1000)*(h/1000)*L*ρ;}
+
+// 初始化
+document.getElementById('project_date').textContent=new Date().toLocaleDateString('zh-CN');
+const auto=localStorage.getItem('stair_calc_v5');
+if(auto){try{const d=JSON.parse(auto);if(d.project_name&&d.project_name.length>0)loadData();}catch(e){}}
+syncBasic();
+</script>
+</body>
+</html>
